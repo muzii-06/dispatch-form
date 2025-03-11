@@ -12,7 +12,7 @@
             background-color: #f4f7f6;
         }
         .form-container {
-            max-width: 1100px;
+            max-width: 1800px;
             margin: auto;
             background: white;
             padding: 20px;
@@ -22,15 +22,27 @@
         canvas {
             border: 1px solid #000;
             background: white;
+            cursor: crosshair;
+        }
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .action-buttons .btn-group {
+            display: flex;
+            justify-content: space-between;
         }
         .action-buttons button {
-            margin: 2px;
+            width: 80px;
+            font-size: 14px;
+            padding: 5px;
         }
     </style>
 </head>
 <body>
 
-    <div class="container mt-4">
+    <div class="container-fluid mx-auto mt-4">
         <div class="form-container">
             <button class="btn btn-secondary">Back to Dashboard</button>
             <h3 class="text-center text-primary">Despatch Report</h3>
@@ -93,10 +105,10 @@
                         </tr>
                     </tfoot>
                 </table>
-                <div class="d-flex">
 
+                <div class="d-flex">
                     <button type="button" class="btn btn-primary" onclick="addRow()">Add Row</button>
-                    <button type="submit" class="btn btn-success d-block mx-auto w-25 ">Submit</button>
+                    <button type="submit" class="btn btn-success d-block mx-auto w-25">Submit</button>
                 </div>
             </form>
         </div>
@@ -104,11 +116,11 @@
 
     <script>
         let serialNumber = 1;
-    
+
         function addRow() {
             let tableBody = document.getElementById("tableBody");
             let row = document.createElement("tr");
-    
+
             row.innerHTML = `
                 <td>${serialNumber++}</td>
                 <td><input type="text" class="form-control" pattern="[A-Za-z0-9 ]+" required></td>
@@ -119,81 +131,77 @@
                 <td><input type="number" class="form-control rate" min="0" required></td>
                 <td><input type="number" class="form-control amount" min="0" required></td>
                 <td>
-                    <canvas width="100" height="30" class="signatureCanvas"></canvas>
+                    <canvas width="120" height="40" class="signatureCanvas"></canvas>
                     <button type="button" class="btn btn-sm btn-danger mt-1 clearSignature">Clear</button>
                 </td>
-                <td class="action-buttons text-center">
-                    <button class="btn btn-warning btn-sm">Edit</button>
-                    <button class="btn btn-danger btn-sm" onclick="removeRow(this)">Delete</button>
-                    <button class="btn btn-success btn-sm">WhatsApp</button>
-                    <button class="btn btn-info btn-sm">Email</button>
-                    <button class="btn btn-secondary btn-sm" onclick="exportToPDF()">PDF</button>
-                    <button class="btn btn-dark btn-sm" onclick="window.print()">Print</button>
+                <td class="action-buttons">
+                    <div class="btn-group">
+                        <button class="btn btn-warning btn-sm">Edit</button>
+                        <button class="btn btn-danger btn-sm" onclick="removeRow(this)">Delete</button>
+                        <button class="btn btn-dark btn-sm" onclick="window.print()">Print</button>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-success btn-sm">WhatsApp</button>
+                        <button class="btn btn-info btn-sm">Email</button>
+                        <button class="btn btn-secondary btn-sm" onclick="exportToPDF()">PDF</button>
+                    </div>
                 </td>
             `;
-    
+
             tableBody.appendChild(row);
             updateTotals();
             initializeCanvas();
         }
-    
-        function removeRow(button) {
-            button.closest("tr").remove();
-            updateTotals();
-        }
-    
-        function updateTotals() {
-            let totalQty = 0, totalReceived = 0, totalReturn = 0, totalExtra = 0, totalRate = 0, totalAmount = 0;
-    
-            document.querySelectorAll(".qty").forEach(input => totalQty += Number(input.value) || 0);
-            document.querySelectorAll(".receivedQty").forEach(input => totalReceived += Number(input.value) || 0);
-            document.querySelectorAll(".returnQty").forEach(input => totalReturn += Number(input.value) || 0);
-            document.querySelectorAll(".extraBottle").forEach(input => totalExtra += Number(input.value) || 0);
-            document.querySelectorAll(".rate").forEach(input => totalRate += Number(input.value) || 0);
-            document.querySelectorAll(".amount").forEach(input => totalAmount += Number(input.value) || 0);
-    
-            document.getElementById("totalQty").innerText = totalQty;
-            document.getElementById("totalReceived").innerText = totalReceived;
-            document.getElementById("totalReturn").innerText = totalReturn;
-            document.getElementById("totalExtra").innerText = totalExtra;
-            document.getElementById("totalRate").innerText = totalRate;
-            document.getElementById("totalAmount").innerText = totalAmount;
-        }
-    
+
         function initializeCanvas() {
             document.querySelectorAll(".signatureCanvas").forEach(canvas => {
                 let ctx = canvas.getContext("2d");
                 let drawing = false;
-    
-                canvas.addEventListener("mousedown", () => drawing = true);
-                canvas.addEventListener("mouseup", () => drawing = false);
+
+                canvas.addEventListener("mousedown", function (event) {
+                    drawing = true;
+                    ctx.beginPath();
+                    ctx.moveTo(event.offsetX, event.offsetY);
+                });
+
                 canvas.addEventListener("mousemove", function (event) {
                     if (!drawing) return;
-                    ctx.fillStyle = "black";
-                    ctx.beginPath();
-                    ctx.arc(event.offsetX, event.offsetY, 1, 0, 2 * Math.PI);
-                    ctx.fill();
+                    ctx.lineTo(event.offsetX, event.offsetY);
+                    ctx.stroke();
+                });
+
+                canvas.addEventListener("mouseup", function () {
+                    drawing = false;
+                });
+
+                canvas.addEventListener("mouseleave", function () {
+                    drawing = false;
+                });
+
+                canvas.nextElementSibling.addEventListener("click", function () {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
                 });
             });
-    
-            // Add event listeners to Clear buttons
-            document.querySelectorAll(".clearSignature").forEach(button => {
-                button.addEventListener("click", function () {
-                    let canvas = this.previousElementSibling; // Get the canvas element
-                    let ctx = canvas.getContext("2d");
-                    ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
-                });
+
+            // Update totals whenever a number input is changed
+            document.querySelectorAll(".qty, .receivedQty, .returnQty, .extraBottle, .rate, .amount").forEach(input => {
+                input.addEventListener("input", updateTotals);
             });
         }
-    
-        // Ensure event listeners are properly applied after adding rows
-        $(document).on("click", ".clearSignature", function () {
-            let canvas = $(this).prev("canvas")[0];
-            let ctx = canvas.getContext("2d");
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-        });
+
+        function updateTotals() {
+            let totalFields = ["totalQty", "totalReceived", "totalReturn", "totalExtra", "totalRate", "totalAmount"];
+            let classes = ["qty", "receivedQty", "returnQty", "extraBottle", "rate", "amount"];
+            
+            totalFields.forEach((field, index) => {
+                let sum = 0;
+                document.querySelectorAll(`.${classes[index]}`).forEach(input => {
+                    sum += Number(input.value) || 0;
+                });
+                document.getElementById(field).innerText = sum;
+            });
+        }
     </script>
-    
 
 </body>
 </html>
